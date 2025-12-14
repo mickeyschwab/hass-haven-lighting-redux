@@ -2,7 +2,7 @@
 
 A revived and modernized Home Assistant integration for **Haven Lighting** smart landscape systems.
 
-> ℹ️ **Note:** This project is a fork and "Redux" of the original [haven-hass](https://github.com/mickeyschwab/haven-hass) integration by **@mickeyschwab**. Major thanks to him for the original work! This version has been rewritten to support the **New Haven API (2025)** and restore functionality after the cloud migration.
+> ℹ️ **Note:** This project is a fork and "Redux" of the original [haven-hass](https://github.com/mickeyschwab/haven-hass) integration by **@mickeyschwab**. Major thanks to him for the original work! This version has been rewritten to support the new **Haven Lighting API (2025)** and restore functionality after the cloud migration.
 
 ## 🌟 Features
 * **Zone Support:** Controls individual Zones (e.g., "Left House", "Path Lights") instead of just the main controller.
