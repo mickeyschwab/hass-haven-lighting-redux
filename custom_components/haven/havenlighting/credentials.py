@@ -1,12 +1,13 @@
 from typing import Dict, Any, Optional
 import requests
 import logging
+import uuid
 from .exceptions import AuthenticationError, ApiError
 from .config import DEVICE_ID, API_TIMEOUT
 
-# GIADA FIX: Pointing both to Production API (was stg-api)
-AUTH_API_BASE = "https://api.havenlighting.com/api"
-PROD_API_BASE = "https://api.havenlighting.com/api"
+# GIADA FIX: Pointing to STAGING (stg-api) because that is where the account lives
+AUTH_API_BASE = "https://stg-api.havenlighting.com/api"
+PROD_API_BASE = "https://stg-api.havenlighting.com/api"
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,9 @@ class Credentials:
         self._token: Optional[str] = None
         self._refresh_token: Optional[str] = None
         self._user_id: Optional[int] = None
-        logger.debug("Initialized Credentials")
+        # Generate a standard UUID for the session
+        self._session_device_id = str(uuid.uuid4())
+        logger.debug(f"Initialized Credentials with Device ID: {self._session_device_id}")
         
     @property
     def is_authenticated(self) -> bool:
@@ -27,21 +30,32 @@ class Credentials:
         """Authenticate with the Haven Lighting service."""
         logger.debug("Attempting authentication for user: %s", email)
         
-        # FIX: Payload uses userName instead of email
+        # GIADA FIX: The "Double-Barreled" Payload
+        # We send BOTH Username and Email to satisfy different server versions.
+        # We point to stg-api because that is where the account validated.
         payload = {
-            "userName": email,
-            "password": password
+            "Username": email,  # Required by Staging
+            "Email": email,     # Required by newer logic
+            "Password": password,
+            "DeviceId": self._session_device_id
         }
         
         try:
+            # Headers to mimic a real browser/app
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+
             response = self._make_request_internal(
                 "POST",
                 "/Auth/Authenticate", 
                 json=payload,
+                headers=headers,
                 auth_required=False
             )
             
-            # FIX: Check for token directly in the root response
             if not response or "token" not in response:
                 logger.error("Authentication failed: No token returned for user %s", email)
                 return False
@@ -135,10 +149,18 @@ class Credentials:
         base_url = PROD_API_BASE if use_prod_api else AUTH_API_BASE
         url = f"{base_url}{path}"
         
+        # Manage Headers
+        headers = kwargs.pop("headers", {})
+        
         if self._token:
-            headers = kwargs.pop("headers", {})
             headers["Authorization"] = f"Bearer {self._token}"
-            kwargs["headers"] = headers
+        
+        if "User-Agent" not in headers:
+             headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        headers["Content-Type"] = "application/json"
+        headers["Accept"] = "application/json"
+        
+        kwargs["headers"] = headers
             
         try:
             response = requests.request(method, url, timeout=timeout, **kwargs)
@@ -156,4 +178,6 @@ class Credentials:
             
         except requests.exceptions.RequestException as e:
             logger.error("Request failed: %s", str(e))
+            if 'response' in locals() and response is not None:
+                logger.error("API Response Body: %s", response.text)
             raise ApiError(f"Request failed: {str(e)}")
