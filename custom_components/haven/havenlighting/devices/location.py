@@ -57,8 +57,9 @@ class Location:
                 if not self._real_location_name and "locationName" in item:
                     self._real_location_name = item["locationName"]
                     
-                if item.get("isZone"):
-                    self._add_or_update_light(item, is_group=False)
+                if not item.get("isZone"):
+                    item.setdefault("type", "Device")
+                self._add_or_update_light(item, is_group=False)
         except Exception as e:
             logger.error("Failed to refresh zones: %s", str(e))
 
@@ -89,7 +90,7 @@ class Location:
     def _add_or_update_light(self, data: Dict[str, Any], is_group: bool) -> None:
         light_id = int(data["id"])
         if "type" not in data:
-            data["type"] = "Group" if is_group else "Zone"
+            data["type"] = "Group" if is_group else ("Zone" if data.get("isZone") else "Device")
             
         if light_id in self._lights:
             self._lights[light_id].update_from_data(data)
