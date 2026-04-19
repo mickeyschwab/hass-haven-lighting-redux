@@ -88,7 +88,7 @@ class Location:
     def _add_or_update_light(self, data: Dict[str, Any], is_group: bool) -> None:
         light_id = int(data["id"])
         if "type" not in data:
-            data["type"] = "Group" if is_group else ("Zone" if data.get("isZone") else "Device")
+            data["type"] = "Group" if is_group else "Zone"
             
         if light_id in self._lights:
             self._lights[light_id].update_from_data(data)
