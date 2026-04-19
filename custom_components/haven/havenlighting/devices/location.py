@@ -56,9 +56,7 @@ class Location:
                 # CAPTURE THE REAL LOCATION NAME
                 if not self._real_location_name and "locationName" in item:
                     self._real_location_name = item["locationName"]
-                    
-                if not item.get("isZone"):
-                    item.setdefault("type", "Device")
+
                 self._add_or_update_light(item, is_group=False)
         except Exception as e:
             logger.error("Failed to refresh zones: %s", str(e))
